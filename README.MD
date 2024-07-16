@@ -7,7 +7,7 @@
 
 ## Installation
 
-**This script was written and test with Python 3.12.2**
+**This script was written and tested with Python 3.12.2**
 
 - Copy all files in this repo except this readme to your local machine.
 - Run `pip install -r requirements.txt`
