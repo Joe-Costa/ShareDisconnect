@@ -33,10 +33,10 @@
 **List of valid arguments:**
 
 options:
-  - -h, --help            show this help message and exit
-  - --verbose, -v         increase output verbosity
-  - --share `SHARE`, -s `SHARE`  Input the SMB share name from which to evict users
-  - --list, -l            List open sessions on the SMB share designated by the --share/-s argument
-  - --evict, -E           Evict all sessions on the SMB share designated by the --share/-s argument
+  - `-h`, `--help`            show this help message and exit
+  - `--verbose`, `-v`         increase output verbosity
+  - `--share SHARE`, `-s SHARE`  Input the SMB share name from which to evict users
+  - `--list`, `-l`            List open sessions on the SMB share designated by the `--share`/`-s` argument
+  - `--evict`, `-E`           Evict all sessions on the SMB share designated by the `--share`/`-s` argument
 
 **If using the `--evict` or `-E` flag the user will be prompted for a yes/no before proceeding**
