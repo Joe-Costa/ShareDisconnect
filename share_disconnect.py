@@ -33,13 +33,30 @@ def get_smb_shares():
     return(requests.get(url, headers=HEADERS, verify=USE_SSL).json())
     
 def get_smb_sessions():
-    url = f"https://{CLUSTER_ADDRESS}/api/v1/smb/sessions/"
-    return(requests.get(url, headers=HEADERS, verify=USE_SSL).json())
+    url = f"https://{CLUSTER_ADDRESS}/api/v1/smb/sessions/?limit=1"
+    sessions = requests.get(url, headers=HEADERS, verify=USE_SSL).json()
+    next_page = sessions['paging'].get('next')
+    tasks = []
+    while next_page:
+        url = f"https://{CLUSTER_ADDRESS}/api" + next_page
+        print(f"URL :", url)
+        paged_session = requests.get(url, headers=HEADERS, verify=USE_SSL).json()
+        # print(f"SESSION_1 ",sessions_1)
+        tasks.append(paged_session)
+        next_page = paged_session.get('paging', {}).get('next')
+    result = {
+    'session_infos': [session_info for item in tasks for session_info in item['session_infos']]
+    }
+    # print(f"RESULT: ", result)
+    return(result)
+
 
 def evict_sessions(sessions):
+    # print(f"SESSIONS :", sessions)
     url = f"https://{CLUSTER_ADDRESS}/api/v1/smb/sessions/close"
     for session in sessions:
         print(f"Evicting user {session['user']['name']} from share {session['share_names']}")
+    
 
 def main():
     url = f"https://{CLUSTER_ADDRESS}/api/v3/smb/shares/?populate-trustee-names=true"
@@ -55,6 +72,7 @@ def main():
     ]
     
     evict_sessions(filtered_list)
+    # evict_sessions(smb_sessions)
             
 
 
