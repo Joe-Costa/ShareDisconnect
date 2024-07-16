@@ -2,7 +2,8 @@
 
 **This tool will disconnect all sessions for the SMB share provided, which could be useful during a cluster**
 **failover or other scenarios.** 
-**Note that active SMB clients connected via UNC will immediately attempt to reconnect**
+
+**Note that active SMB clients connected via UNC will immediately attempt to reconnect and this tool will not prevent this.**
 
 ## Installation
 
@@ -13,7 +14,7 @@
 - Edit `smb_share_evictor.conf` with your cluster's information
 - Make the script executable with `chmod +x smb_share_evictor.py` (Mac, Linux)
 
-** You'll need an API token for an account with the following RBAC rights:
+**You'll need an API token for an account with the following RBAC rights:**
 
 - SMB_SESSION_WRITE
 - SMB_SESSION_READ
