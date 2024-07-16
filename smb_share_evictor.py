@@ -187,6 +187,10 @@ async def main():
             if share_to_evict in item.get("share_names", [])
         ]
 
+        if not filtered_list:
+            print(f"Share {share_to_evict} does not have any open sessions or does not exist.  Exiting...")
+            sys.exit()
+
         # Count user sessions
         session_count = sum('user' in item for item in filtered_list)
 
