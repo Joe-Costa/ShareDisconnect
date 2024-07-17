@@ -9,7 +9,7 @@ import aiohttp
 import asyncio
 
 # Modify this if you'd like to store your config in a different place/name
-config_file = "share_disconnect.conf"
+config_file = "smb_share_evictor.conf"
 
 # Check that config file exists
 if not os.path.isfile(config_file):
@@ -41,7 +41,7 @@ async def get_smb_shares(session):
         return await response.json()
 
 async def get_smb_sessions(session):
-    url = f"https://{CLUSTER_ADDRESS}/api/v1/smb/sessions/?limit=1"
+    url = f"https://{CLUSTER_ADDRESS}/api/v1/smb/sessions/"
     async with session.get(url, headers=HEADERS, ssl=USE_SSL) as response:
         sessions = await response.json()
     
