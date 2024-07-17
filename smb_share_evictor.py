@@ -41,13 +41,13 @@ async def get_smb_shares(session):
         return await response.json()
 
 async def get_smb_sessions(session):
-    url = f"https://{CLUSTER_ADDRESS}/api/v1/smb/sessions/"
+    url = f"https://{CLUSTER_ADDRESS}/api/v1/smb/sessions/?limit=100"
     async with session.get(url, headers=HEADERS, ssl=USE_SSL) as response:
         sessions = await response.json()
     
     next_page = sessions['paging'].get('next')
     tasks = []
-
+    tasks.append(session.get(url, headers=HEADERS, ssl=USE_SSL))
     # Paging support
     while next_page:
         url = f"https://{CLUSTER_ADDRESS}/api" + next_page
