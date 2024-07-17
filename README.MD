@@ -3,7 +3,7 @@
 **This tool will disconnect all sessions for the SMB share provided, which could be useful during a cluster**
 **failover or other scenarios.** 
 
-**This tool also provides the ability to list all SMB sessions and the User accounts and host IP addresses of those sessions**
+**This tool also provides the ability to list all SMB sessions for a specific share and the User accounts and host IP addresses of those sessions**
 
 **Note that active SMB clients connected via UNC will immediately attempt to reconnect and this tool will not prevent this.**
 
