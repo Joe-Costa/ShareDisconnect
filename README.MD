@@ -3,6 +3,11 @@
 **This tool will disconnect all sessions for the SMB share provided, which could be useful during a cluster**
 **failover or other scenarios.** 
 
+**Evicting a session will close ALL other sessions on the same Qumulo cluster that a User might also have open.**
+
+**For example: If closing session 'Files' and user is connected to both 'Files' and 'Data' which are hosted on same Qumulo Cluster**
+**then the 'Data' session will also be closed.**
+
 **This tool also provides the ability to list all SMB sessions for a specific or all shares and the User accounts and host IP addresses of those sessions**
 
 **Note that active SMB clients connected via UNC will immediately attempt to reconnect and this tool will not prevent this.**
