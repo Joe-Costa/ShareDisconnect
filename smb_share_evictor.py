@@ -8,14 +8,6 @@ import json
 import aiohttp
 import asyncio
 
-# # Modify this if you'd like to store your config in a different place/name
-# config_file = "smb_share_evictor.conf"
-
-# # Check that config file exists
-# if not os.path.isfile(config_file):
-#     print(f"ERROR - Config file '{config_file}' not found! Exiting")
-#     sys.exit()
-
 # Load and check config file
 def config_check(config):
     # Check if CLUSTER_ADDRESS is set in the config
@@ -35,11 +27,6 @@ def config_check(config):
     USE_SSL = config["CLUSTER"].getboolean('USE_SSL')
     return CLUSTER_ADDRESS, TOKEN, USE_SSL
 
-async def get_smb_shares(session):
-    url = f"https://{CLUSTER_ADDRESS}/api/v3/smb/shares/?populate-trustee-names=true"
-    async with session.get(url, headers=HEADERS, ssl=USE_SSL) as response:
-        return await response.json()
-
 async def get_smb_sessions(session):
     url = f"https://{CLUSTER_ADDRESS}/api/v1/smb/sessions/?limit=100"
     async with session.get(url, headers=HEADERS, ssl=USE_SSL) as response:
@@ -48,6 +35,7 @@ async def get_smb_sessions(session):
     next_page = sessions['paging'].get('next')
     tasks = []
     tasks.append(session.get(url, headers=HEADERS, ssl=USE_SSL))
+
     # Paging support
     while next_page:
         url = f"https://{CLUSTER_ADDRESS}/api" + next_page
@@ -75,6 +63,7 @@ def sanity_check(session_count):
         else:
             print("Invalid input. Please enter 'yes' or 'no'.")
 
+# Evict and List function
 async def evict_sessions(session, sessions, evict, session_count):
     url = f"https://{CLUSTER_ADDRESS}/api/v1/smb/sessions/close"
     print(f"\nCluster: {CLUSTER_ADDRESS}\n")
@@ -121,54 +110,64 @@ async def main():
     "Please also note that share names for the --share option are case-sesitive!"),formatter_class=argparse.RawTextHelpFormatter
     )
 
+    main_group = parser.add_mutually_exclusive_group(required=True)
+
+    # List all sessions on all shares:
+    main_group.add_argument(
+        '--showall', '-a', 
+        action='store_true', 
+        help='List all open SMB sessions on all shares in the cluster'
+    )
+
+    # Get the name of the share to evict
+    main_group.add_argument(
+        '--share', '-s',
+        type=str, 
+        help='Input the SMB share name from which to evict users'
+    )
+
     # Optional config file
     parser.add_argument(
         '--config', '-c', 
         type=str, 
         help='Cluster config file. Default is <localpath>/smb_share_evictor.conf',
         default="smb_share_evictor.conf"
+    )    
 
-    )    # --verbose option
+    # --verbose option
     parser.add_argument(
         '--verbose', '-v', 
         action='store_true', 
         help='increase output verbosity'
     )
 
-    # Get the share name
-    parser.add_argument(
-        '--share', '-s',
-        type=str, 
-        required=True,
-        help='Input the SMB share name from which to evict users'
-    )
- 
-    # Create group of mutually exclusive -a, -l and -E options
-    group = parser.add_mutually_exclusive_group(required=True)
+    args, remaining_args = parser.parse_known_args()
+    
+    # Check required extra options for --share
+    if args.share:
 
-    # List Sessions option
-    group.add_argument(
-        '--list', '-l', 
-        action='store_true', 
-        help='List open sessions on the SMB share designated by the --share/-s argument'
-    )
+        sub_parser = argparse.ArgumentParser(description="Additional options required for --share")
+        # Create group of mutually exclusive -a, -l and -E options
+        share_group = sub_parser.add_mutually_exclusive_group(required=True)
 
-    # List all sessions on all shares:
-    group.add_argument(
-        '--showall', '-a', 
-        action='store_true', 
-        help='List all open SMB sessions on all shares in the cluster'
-    )    
+        # List Sessions option
+        share_group.add_argument(
+            '--list', '-l', 
+            action='store_true', 
+            help='List open sessions on the SMB share designated by the --share/-s argument'
+        )
 
-    # Evict Sessions option
-    group.add_argument(
-        '--evict', '-E', 
-        action='store_true', 
-        help='Evict all sessions on the SMB share designated by the --share/-s argument'
-    )
+        # Evict Sessions option
+        share_group.add_argument(
+            '--evict', '-E', 
+            action='store_true', 
+            help='Evict all sessions on the SMB share designated by the --share/-s argument'
+        )
 
-    # Parse the arguments
-    args = parser.parse_args()
+        sub_args = sub_parser.parse_args(remaining_args)
+        
+        # Merge the secondary arguments into the primary args namespace
+        args = argparse.Namespace(**vars(args), **vars(sub_args))
 
     # Set verbose mode
     if args.verbose:
@@ -178,18 +177,19 @@ async def main():
     if args.share:
         share_to_evict = args.share
     
-    # Evict sessions if True
-    if args.evict:
-        evict = True
-    
-    # Only list sessions if False
-    if args.list:
-        evict = False
+        # Evict sessions if True
+        if args.evict:
+            evict = True
+        
+        # Only list specific Share's sessions
+        elif args.list:
+            evict = False
 
     # List all sessions
     if args.showall:
         evict = False
         list_all = True
+        share_to_evict = ""
 
     # Check for optional config file
     if args.config:
@@ -198,12 +198,14 @@ async def main():
     # Load config
     config = configparser.ConfigParser()
 
-    #Check config file exists
+    # Check that config file exists
     if not os.path.isfile(config_file):
         print(f"ERROR - Config file '{config_file}' not found! Exiting")
         sys.exit()    
 
     config.read(config_file)
+
+    # Populate info from config file
     CLUSTER_ADDRESS, TOKEN, USE_SSL = config_check(config)
     HEADERS = {
         "Authorization": f"Bearer {TOKEN}",
@@ -211,26 +213,33 @@ async def main():
         "Content-Type": "application/json",
     }
 
-
     # Disable verify SSL if set to False
     if not USE_SSL:
         urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
+    # Main async 'session' function
     async with aiohttp.ClientSession() as session:
         smb_sessions = await get_smb_sessions(session)
         session_infos = [entry for entry in smb_sessions['session_infos']]
-        # Filter list to only include the desired share to close since "share_names" is a dict and
-        # can contain multiple entries
-        filtered_list = [
-            # {**item, "share_names": [share for share in item["share_names"] if share == share_to_evict]}
-            {**item, "share_names": [share for share in item["share_names"]]}
-            for item in session_infos
-            if share_to_evict in item.get("share_names", [])
-        ]
 
-        if not filtered_list:
-            print(f"Share {share_to_evict} does not have any open sessions or does not exist.  Exiting...")
-            sys.exit()
+
+        if not list_all:
+            # Filter list to only include the desired share to close since "share_names" is a dict and
+            # can contain multiple entries
+            filtered_list = [
+                # {**item, "share_names": [share for share in item["share_names"] if share == share_to_evict]}
+                {**item, "share_names": [share for share in item["share_names"]]}
+                for item in session_infos
+                if share_to_evict in item.get("share_names", [])
+            ]
+            # Handle empty lists
+            if not filtered_list:
+                print(f"Share {share_to_evict} does not have any open sessions or does not exist.  Exiting...")
+                sys.exit()
+        
+        # Send all results for --showall
+        else:
+            filtered_list = session_infos
 
         # Count user sessions
         session_count = sum('user' in item for item in filtered_list)
@@ -238,7 +247,6 @@ async def main():
         if evict:
             # Ensure user wants to proceed
             proceed = sanity_check(session_count)
-
         if proceed and evict:
             # Evict sessions if sanity check passes and --evict arg is used
             await evict_sessions(session, filtered_list, evict, session_count)
