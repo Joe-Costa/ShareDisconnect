@@ -3,7 +3,7 @@
 **This tool will disconnect all sessions for the SMB share provided, which could be useful during a cluster**
 **failover or other scenarios.** 
 
-**This tool also provides the ability to list all SMB sessions for a specific share and the User accounts and host IP addresses of those sessions**
+**This tool also provides the ability to list all SMB sessions for a specific or all shares and the User accounts and host IP addresses of those sessions**
 
 **Note that active SMB clients connected via UNC will immediately attempt to reconnect and this tool will not prevent this.**
 
@@ -37,8 +37,12 @@
 options:
   - `-h`, `--help`            show this help message and exit
   - `--verbose`, `-v`         increase output verbosity
+  - `--config CONFIG`, `-c /path/to/CONFIG` Cluster config file. Default is `localpath/smb_share_evictor.conf`
+  - `--showall`, `-a`        List all open SMB sessions on all shares in the cluster
   - `--share SHARE`, `-s SHARE`  Input the SMB share name from which to evict users
-  - `--list`, `-l`            List open sessions on the SMB share designated by the `--share`/`-s` argument
-  - `--evict`, `-E`           Evict all sessions on the SMB share designated by the `--share`/`-s` argument
+
+  Required options for `--share`:
+  * `--list`, `-l`            List open sessions on the SMB share designated by the `--share`/`-s` argument
+  * `--evict`, `-E`           Evict all sessions on the SMB share designated by the `--share`/`-s` argument
 
 **If using the `--evict` or `-E` flag the user will be prompted for a yes/no before proceeding**
