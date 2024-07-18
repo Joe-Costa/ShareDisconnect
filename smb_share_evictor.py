@@ -8,13 +8,13 @@ import json
 import aiohttp
 import asyncio
 
-# Modify this if you'd like to store your config in a different place/name
-config_file = "smb_share_evictor.conf"
+# # Modify this if you'd like to store your config in a different place/name
+# config_file = "smb_share_evictor.conf"
 
-# Check that config file exists
-if not os.path.isfile(config_file):
-    print(f"ERROR - Config file '{config_file}' not found! Exiting")
-    sys.exit()
+# # Check that config file exists
+# if not os.path.isfile(config_file):
+#     print(f"ERROR - Config file '{config_file}' not found! Exiting")
+#     sys.exit()
 
 # Load and check config file
 def config_check(config):
@@ -77,11 +77,11 @@ def sanity_check(session_count):
 
 async def evict_sessions(session, sessions, evict, session_count):
     url = f"https://{CLUSTER_ADDRESS}/api/v1/smb/sessions/close"
-
+    print(f"\nCluster: {CLUSTER_ADDRESS}\n")
     if not evict:
-        print(f"Listing {session_count} sessions on share {share_to_evict}:")
+        print(f"Listing {session_count} sessions on share {share_to_evict}:\n")
         for session_info in sessions:
-            print(f"{session_info['user']['name']} is connected from host {session_info['originator']}")
+            print(f"{session_info['user']['name']} is connected to share(s) {', '.join(map(str, session_info['share_names']))} from host {session_info['originator']}")
     else:
         print(f"Evicting {session_count} sessions")
         tasks = []
@@ -107,21 +107,28 @@ async def main():
     verbose = False
     evict = False
     proceed = False
-
-    # Load config
-    config = configparser.ConfigParser()
-    config.read(config_file)
-    CLUSTER_ADDRESS, TOKEN, USE_SSL = config_check(config)
-    HEADERS = {
-        "Authorization": f"Bearer {TOKEN}",
-        "Accept": "application/json",
-        "Content-Type": "application/json",
-    }
+    list_all = False
 
     # Parse command line options
-    parser = argparse.ArgumentParser()
+    parser = argparse.ArgumentParser(description=(
+    "Qumulo SMB Share Evictor - Close all sessions on a specific SMB share.\n\n"
+    "Evicting a session will close ALL other sessions on the same Qumulo cluster that a User\n"
+    "might have also open.\n\n" 
+    "For example: If closing session 'Files' and user is connected to both 'Files' and 'Data' which\n"
+    "hosted on same Qumulo Cluster then the 'Data' session will also be closed.\n\n"
+    "Please note that this script does not disable the SMB share and active client machines will likely\n"
+    "quickly re-establish a new SMB session.\n"
+    "Please also note that share names for the --share option are case-sesitive!"),formatter_class=argparse.RawTextHelpFormatter
+    )
 
-    # --verbose option
+    # Optional config file
+    parser.add_argument(
+        '--config', '-c', 
+        type=str, 
+        help='Cluster config file. Default is <localpath>/smb_share_evictor.conf',
+        default="smb_share_evictor.conf"
+
+    )    # --verbose option
     parser.add_argument(
         '--verbose', '-v', 
         action='store_true', 
@@ -135,7 +142,8 @@ async def main():
         required=True,
         help='Input the SMB share name from which to evict users'
     )
-
+ 
+    # Create group of mutually exclusive -a, -l and -E options
     group = parser.add_mutually_exclusive_group(required=True)
 
     # List Sessions option
@@ -144,7 +152,14 @@ async def main():
         action='store_true', 
         help='List open sessions on the SMB share designated by the --share/-s argument'
     )
-    
+
+    # List all sessions on all shares:
+    group.add_argument(
+        '--showall', '-a', 
+        action='store_true', 
+        help='List all open SMB sessions on all shares in the cluster'
+    )    
+
     # Evict Sessions option
     group.add_argument(
         '--evict', '-E', 
@@ -171,6 +186,32 @@ async def main():
     if args.list:
         evict = False
 
+    # List all sessions
+    if args.showall:
+        evict = False
+        list_all = True
+
+    # Check for optional config file
+    if args.config:
+        config_file = args.config
+
+    # Load config
+    config = configparser.ConfigParser()
+
+    #Check config file exists
+    if not os.path.isfile(config_file):
+        print(f"ERROR - Config file '{config_file}' not found! Exiting")
+        sys.exit()    
+
+    config.read(config_file)
+    CLUSTER_ADDRESS, TOKEN, USE_SSL = config_check(config)
+    HEADERS = {
+        "Authorization": f"Bearer {TOKEN}",
+        "Accept": "application/json",
+        "Content-Type": "application/json",
+    }
+
+
     # Disable verify SSL if set to False
     if not USE_SSL:
         urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
@@ -178,11 +219,11 @@ async def main():
     async with aiohttp.ClientSession() as session:
         smb_sessions = await get_smb_sessions(session)
         session_infos = [entry for entry in smb_sessions['session_infos']]
-                
         # Filter list to only include the desired share to close since "share_names" is a dict and
         # can contain multiple entries
         filtered_list = [
-            {**item, "share_names": [share for share in item["share_names"] if share == share_to_evict]}
+            # {**item, "share_names": [share for share in item["share_names"] if share == share_to_evict]}
+            {**item, "share_names": [share for share in item["share_names"]]}
             for item in session_infos
             if share_to_evict in item.get("share_names", [])
         ]
@@ -201,9 +242,12 @@ async def main():
         if proceed and evict:
             # Evict sessions if sanity check passes and --evict arg is used
             await evict_sessions(session, filtered_list, evict, session_count)
-        else:
+        elif not evict and not list_all:
             # Run the listing operation only
             await evict_sessions(session, filtered_list, evict, session_count)
+        else:
+            # Show all sessions
+            await evict_sessions(session, session_infos, evict, session_count)
 
 if __name__ == "__main__":
     asyncio.run(main())
