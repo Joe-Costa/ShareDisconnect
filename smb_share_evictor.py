@@ -7,6 +7,7 @@ import os
 import json
 import aiohttp
 import asyncio
+import socket
 
 # Load and check config file
 def config_check(config):
@@ -26,6 +27,15 @@ def config_check(config):
 
     USE_SSL = config["CLUSTER"].getboolean('USE_SSL')
     return CLUSTER_ADDRESS, TOKEN, USE_SSL
+
+# Connectivity check function
+def check_cluster_access(address, port=443):
+    try:
+        with socket.create_connection((address, port), timeout=10) as sock:
+            return True
+    except (socket.timeout, socket.error) as e:
+        print(f"Failed to connect to {address} on port {port}: {e}")
+        return False
 
 async def get_smb_sessions(session):
     url = f"https://{CLUSTER_ADDRESS}/api/v1/smb/sessions/?limit=100"
@@ -212,6 +222,11 @@ async def main():
         "Accept": "application/json",
         "Content-Type": "application/json",
     }
+
+    # Check for access to cluster at CLUSTER_ADDRESS
+    if not check_cluster_access(CLUSTER_ADDRESS):
+        print(f"Cannot access cluster {CLUSTER_ADDRESS} on port 443. Exiting...")
+        sys.exit()
 
     # Disable verify SSL if set to False
     if not USE_SSL:
