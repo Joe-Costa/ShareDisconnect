@@ -78,7 +78,7 @@ async def evict_sessions(session, sessions, evict, session_count):
     url = f"https://{CLUSTER_ADDRESS}/api/v1/smb/sessions/close"
     print(f"\nCluster: {CLUSTER_ADDRESS}\n")
     if not evict:
-        print(f"Listing {session_count} sessions on share {share_to_evict}:\n")
+        print(f"Listing {session_count} session(s): {share_to_evict}\n")
         for session_info in sessions:
             print(f"{session_info['user']['name']} is connected to share(s) {', '.join(map(str, session_info['share_names']))} from host {session_info['originator']}")
     else:
