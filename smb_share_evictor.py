@@ -133,14 +133,14 @@ async def main():
     main_group.add_argument(
         '--share', '-s',
         type=str, 
-        help='Input the SMB share name from which to evict users'
+        help='Name of the SMB share from which to evict users'
     )
 
     # Optional config file
     parser.add_argument(
         '--config', '-c', 
         type=str, 
-        help='Cluster config file. Default is <localpath>/smb_share_evictor.conf',
+        help='Optional cluster config file. Default is <localpath>/smb_share_evictor.conf',
         default="smb_share_evictor.conf"
     )    
 
@@ -148,7 +148,7 @@ async def main():
     parser.add_argument(
         '--verbose', '-v', 
         action='store_true', 
-        help='increase output verbosity'
+        help='Increase output verbosity'
     )
 
     args, remaining_args = parser.parse_known_args()
