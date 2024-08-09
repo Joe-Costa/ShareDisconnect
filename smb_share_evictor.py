@@ -8,6 +8,7 @@ import json
 import aiohttp
 import asyncio
 import socket
+import requests
 
 # Load and check config file
 def config_check(config):
@@ -28,8 +29,8 @@ def config_check(config):
     USE_SSL = config["CLUSTER"].getboolean('USE_SSL')
     return CLUSTER_ADDRESS, TOKEN, USE_SSL
 
-# Connectivity check function
-def check_cluster_access(address, port=443):
+# Basic connectivity check function
+def check_cluster_connectivity(address, port=443):
     try:
         with socket.create_connection((address, port), timeout=10) as sock:
             return True
@@ -37,8 +38,22 @@ def check_cluster_access(address, port=443):
         print(f"Failed to connect to {address} on port {port}: {e}")
         return False
 
+# Check that user has the right level of access
+def check_access_rights():
+    url = f"https://{CLUSTER_ADDRESS}/v1/session/who-am-i"
+    response = requests.get(url, headers=HEADERS, verify=USE_SSL).json()
+    user_privileges = response.get('privileges')
+    who_am_i = response.get('name')
+    all_rights_required = set(RBAC).issubset(set(user_privileges))
+    if not all_rights_required:
+        missing_privileges = [item for item in RBAC if item not in user_privileges]
+        return(False, missing_privileges, who_am_i)
+    else:
+        return(True, [], who_am_i)
+
+
 async def get_smb_sessions(session):
-    url = f"https://{CLUSTER_ADDRESS}/api/v1/smb/sessions/?limit=100"
+    url = f"https://{CLUSTER_ADDRESS}/api/v1/smb/sessions/?limit=1"
     async with session.get(url, headers=HEADERS, ssl=USE_SSL) as response:
         sessions = await response.json()
     
@@ -60,6 +75,7 @@ async def get_smb_sessions(session):
     }
     return result
 
+
 # Verify that "Evict" command should proceed
 def sanity_check(session_count):
     while True:
@@ -74,9 +90,9 @@ def sanity_check(session_count):
             print("Invalid input. Please enter 'yes' or 'no'.")
 
 # Evict and List function
-async def evict_sessions(session, sessions, evict, session_count):
+async def evict_sessions(session, sessions, evict, session_count, who_am_i):
     url = f"https://{CLUSTER_ADDRESS}/api/v1/smb/sessions/close"
-    print(f"\nCluster: {CLUSTER_ADDRESS}\n")
+    print(f"\nCluster: {CLUSTER_ADDRESS}     API Token User: {who_am_i}\n")
     if not evict:
         print(f"Listing {session_count} session(s): {share_to_evict}\n")
         for session_info in sessions:
@@ -102,11 +118,15 @@ async def main():
     global USE_SSL
     global HEADERS
     global verbose
+    global RBAC
 
     verbose = False
     evict = False
     proceed = False
     list_all = False
+    check_access = False
+
+    RBAC = [ "PRIVILEGE_SMB_SESSION_WRITE", "PRIVILEGE_SMB_SESSION_READ", "PRIVILEGE_SMB_SHARE_READ" ]
 
     # Parse command line options
     parser = argparse.ArgumentParser(description=(
@@ -224,13 +244,19 @@ async def main():
     }
 
     # Check for access to cluster at CLUSTER_ADDRESS
-    if not check_cluster_access(CLUSTER_ADDRESS):
+    if not check_cluster_connectivity(CLUSTER_ADDRESS):
         print(f"Cannot access cluster {CLUSTER_ADDRESS} on port 443. Exiting...")
         sys.exit()
 
     # Disable verify SSL if set to False
     if not USE_SSL:
         urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+
+    # Check RBAC access level    
+    all_privileges, missing_privileges, who_am_i = check_access_rights()
+    if not all_privileges:
+        print(f"Cannot proceed, user {who_am_i} is missign the following RBAC privileges: {missing_privileges}")
+        exit()
 
     # Main async 'session' function
     async with aiohttp.ClientSession() as session:
@@ -264,13 +290,13 @@ async def main():
             proceed = sanity_check(session_count)
         if proceed and evict:
             # Evict sessions if sanity check passes and --evict arg is used
-            await evict_sessions(session, filtered_list, evict, session_count)
+            await evict_sessions(session, filtered_list, evict, session_count, who_am_i)
         elif not evict and not list_all:
             # Run the listing operation only
-            await evict_sessions(session, filtered_list, evict, session_count)
+            await evict_sessions(session, filtered_list, evict, session_count, who_am_i)
         else:
             # Show all sessions
-            await evict_sessions(session, session_infos, evict, session_count)
+            await evict_sessions(session, session_infos, evict, session_count, who_am_i)
 
 if __name__ == "__main__":
     asyncio.run(main())
