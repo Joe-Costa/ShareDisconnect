@@ -53,7 +53,7 @@ def check_access_rights():
 
 
 async def get_smb_sessions(session):
-    url = f"https://{CLUSTER_ADDRESS}/api/v1/smb/sessions/?limit=1"
+    url = f"https://{CLUSTER_ADDRESS}/api/v1/smb/sessions/"
     async with session.get(url, headers=HEADERS, ssl=USE_SSL) as response:
         sessions = await response.json()
     
