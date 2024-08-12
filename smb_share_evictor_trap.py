@@ -76,7 +76,7 @@ async def get_smb_sessions(session):
             next_page = (await (await session.get(url, headers=HEADERS, ssl=USE_SSL)).json()).get('paging', {}).get('next')
         except aiohttp.client_exceptions.ContentTypeError as e:
             raw_content = await response.text()
-            print(f"Failed to decode JSON on paging. Raw content was: {raw_content}")
+            print(f"Failed to decode JSON on paging inside Paging Loop. Raw content was: {raw_content}, next Page: {next_page}")
             raise e
 
     responses = await asyncio.gather(*tasks)
