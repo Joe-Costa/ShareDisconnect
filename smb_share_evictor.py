@@ -51,7 +51,7 @@ def check_access_rights():
     else:
         return(True, [], who_am_i)
 
-
+# Colelct open SMB sessions
 async def get_smb_sessions(session):
     url = f"https://{CLUSTER_ADDRESS}/api/v1/smb/sessions/"
     async with session.get(url, headers=HEADERS, ssl=USE_SSL) as response:
