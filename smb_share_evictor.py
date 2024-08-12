@@ -168,7 +168,7 @@ async def main():
     parser.add_argument(
         '--verbose', '-v', 
         action='store_true', 
-        help='Increase output verbosity'
+        help='Increase output verbosity when evicting SMB sessions'
     )
 
     args, remaining_args = parser.parse_known_args()
