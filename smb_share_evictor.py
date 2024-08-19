@@ -96,6 +96,7 @@ def sanity_check(session_count):
             print("Invalid input. Please enter 'yes' or 'no'.")
 
 # Evict and List function
+async def evict_sessions(session, sessions, evict, session_count, who_am_i):
     url = f"https://{CLUSTER_ADDRESS}/api/v1/smb/sessions/close"
     print(f"\nCluster: {CLUSTER_ADDRESS}     API Token User: {who_am_i}\n")
     if not evict:
@@ -267,8 +268,8 @@ async def main():
     timeout = aiohttp.ClientTimeout(
     total=None,            # Total timeout for the request (in seconds)
     connect=None,           # Timeout for establishing a connection
-    sock_read=None,         # Timeout for reading from a connected socket
-    sock_connect=None       # Timeout for connecting to a socket
+    sock_read=30,         # Timeout for reading from a connected socket
+    sock_connect=5       # Timeout for connecting to a socket
     )
     async with aiohttp.ClientSession(timeout=timeout) as session:
         smb_sessions = await get_smb_sessions(session)
