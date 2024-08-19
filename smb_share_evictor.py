@@ -55,10 +55,10 @@ def check_access_rights():
 async def get_smb_sessions(session):
     url = f"https://{CLUSTER_ADDRESS}/api/v1/smb/sessions/"
     timeout = aiohttp.ClientTimeout(
-    total=60,            # Total timeout for the request (in seconds)
-    connect=5,           # Timeout for establishing a connection
-    sock_read=30,         # Timeout for reading from a connected socket
-    sock_connect=5       # Timeout for connecting to a socket
+    total=None,            # Total timeout for the request (in seconds)
+    connect=None,           # Timeout for establishing a connection
+    sock_read=None,         # Timeout for reading from a connected socket
+    sock_connect=None       # Timeout for connecting to a socket
     )
     async with session.get(url, headers=HEADERS, ssl=USE_SSL, timeout=timeout) as response:
         sessions = await response.json()
@@ -265,10 +265,10 @@ async def main():
 
     # Main async 'session' function
     timeout = aiohttp.ClientTimeout(
-    total=60,            # Total timeout for the request (in seconds)
-    connect=5,           # Timeout for establishing a connection
-    sock_read=30,         # Timeout for reading from a connected socket
-    sock_connect=5       # Timeout for connecting to a socket
+    total=None,            # Total timeout for the request (in seconds)
+    connect=None,           # Timeout for establishing a connection
+    sock_read=None,         # Timeout for reading from a connected socket
+    sock_connect=None       # Timeout for connecting to a socket
     )
     async with aiohttp.ClientSession(timeout=timeout) as session:
         smb_sessions = await get_smb_sessions(session)
