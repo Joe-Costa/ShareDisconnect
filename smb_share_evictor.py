@@ -51,7 +51,7 @@ def check_access_rights():
     else:
         return(True, [], who_am_i)
 
-
+# Get all open SMB sessions
 async def get_smb_sessions(session):
     url = f"https://{CLUSTER_ADDRESS}/api/v1/smb/sessions/"
     async with session.get(url, headers=HEADERS, ssl=USE_SSL) as response:
@@ -255,7 +255,7 @@ async def main():
     # Check RBAC access level    
     all_privileges, missing_privileges, who_am_i = check_access_rights()
     if not all_privileges:
-        print(f"Cannot proceed, user {who_am_i} is missign the following RBAC privileges: {missing_privileges}")
+        print(f"Cannot proceed, user {who_am_i} is missing the following RBAC privileges: {missing_privileges}")
         exit()
 
     # Main async 'session' function
