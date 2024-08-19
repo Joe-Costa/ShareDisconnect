@@ -41,7 +41,7 @@
 
 options:
   - `-h`, `--help`            show this help message and exit
-  - `--verbose`, `-v`         increase output verbosity
+  - `--verbose`, `-v`         increase output verbosity of the evict process 
   - `--config CONFIG`, `-c /path/to/CONFIG` Cluster config file. Default is `localpath/smb_share_evictor.conf`
   - `--showall`, `-a`        List all open SMB sessions on all shares in the cluster
   - `--share SHARE`, `-s SHARE`  Input the SMB share name from which to evict users
