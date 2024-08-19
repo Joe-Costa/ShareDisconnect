@@ -54,7 +54,13 @@ def check_access_rights():
 # Get all open SMB sessions
 async def get_smb_sessions(session):
     url = f"https://{CLUSTER_ADDRESS}/api/v1/smb/sessions/"
-    async with session.get(url, headers=HEADERS, ssl=USE_SSL) as response:
+    timeout = aiohttp.ClientTimeout(
+    total=60,            # Total timeout for the request (in seconds)
+    connect=5,           # Timeout for establishing a connection
+    sock_read=30,         # Timeout for reading from a connected socket
+    sock_connect=5       # Timeout for connecting to a socket
+    )
+    async with session.get(url, headers=HEADERS, ssl=USE_SSL, timeout=timeout) as response:
         sessions = await response.json()
     
     next_page = sessions['paging'].get('next')
@@ -90,7 +96,6 @@ def sanity_check(session_count):
             print("Invalid input. Please enter 'yes' or 'no'.")
 
 # Evict and List function
-async def evict_sessions(session, sessions, evict, session_count, who_am_i):
     url = f"https://{CLUSTER_ADDRESS}/api/v1/smb/sessions/close"
     print(f"\nCluster: {CLUSTER_ADDRESS}     API Token User: {who_am_i}\n")
     if not evict:
@@ -259,7 +264,13 @@ async def main():
         exit()
 
     # Main async 'session' function
-    async with aiohttp.ClientSession() as session:
+    timeout = aiohttp.ClientTimeout(
+    total=60,            # Total timeout for the request (in seconds)
+    connect=5,           # Timeout for establishing a connection
+    sock_read=30,         # Timeout for reading from a connected socket
+    sock_connect=5       # Timeout for connecting to a socket
+    )
+    async with aiohttp.ClientSession(timeout=timeout) as session:
         smb_sessions = await get_smb_sessions(session)
         session_infos = [entry for entry in smb_sessions['session_infos']]
 
