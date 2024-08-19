@@ -280,7 +280,7 @@ async def main():
         
         # Send all results for --showall
         else:
-            filtered_list = session_infos
+            filtered_list = session_infos.copy()
 
         # Count user sessions
         session_count = sum('user' in item for item in filtered_list)
