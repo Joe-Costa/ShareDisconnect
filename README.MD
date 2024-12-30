@@ -1,3 +1,8 @@
+# Note!  The functionality provided by this tool is now natively available in QFSD via the `qq smb_close_sessions` command.
+
+**This repo will remain online for older Qumulo clusters or anyone curious about Qumulo API scripting**
+
+
 # Qumulo SMB Share Session Evictor
 
 **This tool will disconnect all sessions for the SMB share provided, which could be useful during a cluster**
